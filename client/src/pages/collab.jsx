@@ -170,7 +170,7 @@ export default function Collab() {
     setAiEditLoading(true)
     addSystemMessage(`✏️ AI is rewriting your code: "${instruction}"`, 'ai')
     try {
-      const response = await fetch(fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/v1/collab/ai-edit`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/v1/collab/ai-edit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
