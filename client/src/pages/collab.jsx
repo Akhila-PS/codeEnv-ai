@@ -118,7 +118,7 @@ export default function Collab() {
     if (!code || code.trim().length < 50) return
     setAiThinking(true)
     try {
-      const response = await fetch('http://localhost:5000/api/v1/collab/ai-observe', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/v1/collab/ai-observe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +144,7 @@ export default function Collab() {
     const code = activeFile?.content || ''
     setAiThinking(true)
     try {
-      const response = await fetch('http://localhost:5000/api/v1/collab/ai-observe', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/v1/collab/ai-observe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -170,7 +170,7 @@ export default function Collab() {
     setAiEditLoading(true)
     addSystemMessage(`✏️ AI is rewriting your code: "${instruction}"`, 'ai')
     try {
-      const response = await fetch('http://localhost:5000/api/v1/collab/ai-edit', {
+      const response = await fetch(fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/v1/collab/ai-edit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -210,7 +210,8 @@ export default function Collab() {
   }
 
   const connectToRoom = (id) => {
-    const ws = new WebSocket('ws://localhost:5000')
+    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:5000'
+    const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
     ws.onopen = () => {
@@ -368,7 +369,7 @@ export default function Collab() {
     if (activeFile) {
       addSystemMessage('Generating session summary...', 'ai')
       try {
-        const response = await fetch('http://localhost:5000/api/v1/collab/ai-observe', {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/v1/collab/ai-observe`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
