@@ -256,4 +256,232 @@ Return JSON: {"newCode": "...", "explanation": "..."}`
     next(error)
   }
 })
+
+router.post('/interview/start', authMiddleware, async (req, res, next) => {
+  try {
+    const { code, language, difficulty } = req.body
+    if (!code) return res.status(400).json({ error: 'Code is required' })
+
+    const Groq = require('groq-sdk')
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+
+    const difficultyPrompts = {
+      junior: 'Ask basic questions about correctness, variable naming, and simple improvements.',
+      mid: 'Ask about time complexity, design patterns, edge cases, and refactoring.',
+      senior: 'Ask about scalability, architecture decisions, tradeoffs, security, and production concerns.'
+    }
+
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        {
+          role: 'system',
+          content: `You are a senior software engineer conducting a technical interview. Generate exactly 5 interview questions about the provided code. ${difficultyPrompts[difficulty || 'mid']} Return ONLY a JSON array of 5 question strings. No other text.`
+        },
+        {
+          role: 'user',
+          content: `Generate 5 ${difficulty} level interview questions for this ${language} code:\n\`\`\`${language}\n${code}\n\`\`\`\n\nReturn ONLY: ["question1", "question2", "question3", "question4", "question5"]`
+        }
+      ],
+      temperature: 0.4,
+      max_tokens: 1000,
+    })
+
+    const text = completion.choices[0].message.content.trim()
+    const cleaned = text.replace(/```json|```/g, '').trim()
+    const questions = JSON.parse(cleaned)
+
+    res.json({ questions })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.post('/interview/evaluate-answer', authMiddleware, async (req, res, next) => {
+  try {
+    const { code, language, difficulty, question, answer, questionIndex } = req.body
+
+    const Groq = require('groq-sdk')
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a senior engineer evaluating a candidate\'s interview answer. Be fair but honest. Return ONLY valid JSON.'
+        },
+        {
+          role: 'user',
+          content: `Code (${language}):
+\`\`\`${language}
+${code}
+\`\`\`
+
+Question: ${question}
+Candidate's Answer: ${answer || '(No answer given)'}
+Difficulty: ${difficulty}
+
+Evaluate and return ONLY this JSON:
+{
+  "score": <0-100>,
+  "feedback": "<2-3 sentences of specific feedback on their answer>",
+  "idealAnswer": "<what a strong answer would include in 2 sentences>"
+}`
+        }
+      ],
+      temperature: 0.2,
+      max_tokens: 500,
+    })
+
+    const text = completion.choices[0].message.content.trim()
+    const cleaned = text.replace(/```json|```/g, '').trim()
+    const result = JSON.parse(cleaned)
+    res.json(result)
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.post('/interview/finish', authMiddleware, async (req, res, next) => {
+  try {
+    const { code, language, difficulty, questions, answers } = req.body
+
+    const Groq = require('groq-sdk')
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+
+    const qaText = questions.map((q, i) =>
+      `Q${i + 1}: ${q}\nA${i + 1}: ${answers[i]?.answer || '(No answer)'}`
+    ).join('\n\n')
+
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a senior engineer giving final interview feedback. Be honest and constructive. Return ONLY valid JSON.'
+        },
+        {
+          role: 'user',
+          content: `Evaluate this complete ${difficulty} level technical interview for ${language} code.
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\`
+
+Interview Q&A:
+${qaText}
+
+Return ONLY this JSON:
+{
+  "overallScore": <0-100>,
+  "technicalScore": <0-100>,
+  "communicationScore": <0-100>,
+  "problemSolvingScore": <0-100>,
+  "verdict": "<one line verdict like 'Ready for mid-level roles' or 'Needs more preparation'>",
+  "summary": "<3-4 sentence overall assessment>",
+  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
+  "studyTopics": ["<topic to study 1>", "<topic to study 2>", "<topic to study 3>"],
+  "questionReviews": [
+    {
+      "question": "<question text>",
+      "answer": "<their answer>",
+      "score": <0-100>,
+      "comment": "<one line comment>"
+    }
+  ]
+}`
+        }
+      ],
+      temperature: 0.2,
+      max_tokens: 2000,
+    })
+
+    const text = completion.choices[0].message.content.trim()
+    const cleaned = text.replace(/```json|```/g, '').trim()
+    const result = JSON.parse(cleaned)
+    res.json(result)
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.delete('/history/all', authMiddleware, (req, res, next) => {
+  try {
+    const db = readDB()
+    db.reviews = db.reviews.filter(r => r.userId !== req.userId)
+    writeDB(db)
+    res.json({ message: 'All reviews deleted successfully.' })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.post('/learning/generate', authMiddleware, async (req, res, next) => {
+  try {
+    const { history } = req.body
+    if (!history || history.length < 2) {
+      return res.status(400).json({ error: 'Need at least 2 reviews' })
+    }
+
+    const Groq = require('groq-sdk')
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+
+    const historyText = history.slice(0, 10).map((h, i) =>
+      `Review ${i + 1}: Language=${h.language}, Score=${h.score}/100, Summary="${h.summary}"`
+    ).join('\n')
+
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are an expert programming mentor. Create personalized 7-day learning plans based on code review history. Return ONLY valid JSON.'
+        },
+        {
+          role: 'user',
+          content: `Based on this developer's code review history, create a personalized 7-day learning path:
+
+${historyText}
+
+Return ONLY this JSON:
+{
+  "title": "<personalized title like 'Java Performance Mastery Plan'>",
+  "summary": "<2 sentence summary of what this plan addresses>",
+  "weakAreas": ["<weak area 1>", "<weak area 2>", "<weak area 3>"],
+  "days": [
+    {
+      "day": 1,
+      "title": "<day title>",
+      "focus": "<one line focus>",
+      "estimatedTime": "<e.g. 2 hours>",
+      "topics": [
+        {
+          "id": "d1t1",
+          "title": "<topic title>",
+          "description": "<one sentence description>",
+          "type": "<concept|practice|project>",
+          "resource": "<specific book chapter, website, or exercise to use>"
+        }
+      ]
+    }
+  ]
+}
+
+Make exactly 7 days with 2-3 topics each. Base it specifically on their weak areas from the review history.`
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 3000,
+    })
+
+    const text = completion.choices[0].message.content.trim()
+    const cleaned = text.replace(/```json|```/g, '').trim()
+    const result = JSON.parse(cleaned)
+    res.json(result)
+  } catch (error) {
+    next(error)
+  }
+})
 module.exports = router

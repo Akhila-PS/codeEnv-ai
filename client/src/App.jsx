@@ -7,6 +7,8 @@ import Landing from './pages/Landing'
 import GithubReview from './pages/GithubReview'
 import Collab from './pages/Collab'
 import EyeCare from './components/EyeCare'
+import InterviewSimulator from './pages/InterviewSimulator'
+import LearningPath from './pages/LearningPath'
 
 function App() {
   const token = localStorage.getItem('token')
@@ -21,6 +23,9 @@ function App() {
         <Route path="/analytics" element={token ? <Analytics /> : <Navigate to="/login" />} />
         <Route path="/github" element={token ? <GithubReview /> : <Navigate to="/login" />} />
         <Route path="/collab" element={token ? <Collab /> : <Navigate to="/login" />} />
+        <Route path="/interview" element={token ? <InterviewSimulator /> : <Navigate to="/login" />} />
+        <Route path="/learning" element={token ? <LearningPath /> : <Navigate to="/login" />} />
+        <Route path="/learning" element={token ? <LearningPath /> : <Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
   )

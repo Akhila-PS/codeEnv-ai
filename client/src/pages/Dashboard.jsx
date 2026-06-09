@@ -89,12 +89,25 @@ export default function Dashboard() {
   }
 
   const handleDelete = async (id) => {
-    try {
-      await api.delete(`/review/${id}`)
-    } catch {}
+  try {
+    await api.delete(`/review/${id}`)
     setHistory(prev => prev.filter(h => h.id !== id))
     if (viewingHistory?.id === id) setViewingHistory(null)
+  } catch (err) {
+    alert('Failed to delete. Try again.')
   }
+}
+
+const handleDeleteAll = async () => {
+  if (!window.confirm('Delete all history permanently?')) return
+  try {
+    await api.delete('/history/all')
+    setHistory([])
+    setViewingHistory(null)
+  } catch (err) {
+    alert('Failed to delete all. Try again.')
+  }
+}
 
   const handleEditSave = (id) => {
     setHistory(prev => prev.map(h => h.id === id ? { ...h, note: editNote } : h))
@@ -125,24 +138,36 @@ export default function Dashboard() {
           </h1>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-gray-400 text-sm hidden sm:block">👋 {user.name}</span>
+          <span className=" hover:bg-green-600 text-sm hidden sm:block"> {user.name}</span>
           <button
             onClick={() => navigate('/analytics')}
-            className="text-sm bg-gray-800 hover:bg-violet-600 px-3 py-1.5 rounded-lg transition hidden sm:block"
+            className="text-sm bg-gray-800  hover:bg-green-600 px-3 py-1.5 rounded-lg transition hidden sm:block"
           >
-            📊 Analytics
+             Analytics
           </button>
           <button
             onClick={() => navigate('/github')}
             className="text-sm bg-gray-800 hover:bg-green-600 px-3 py-1.5 rounded-lg transition hidden sm:block"
           >
-            🐙 GitHub PR
+             GitHub PR
+          </button>
+          <button
+            onClick={() => navigate('/interview')}
+            className="text-sm bg-gray-800  hover:bg-green-600 px-3 py-1.5 rounded-lg transition hidden sm:block"
+          >
+             Interview
+          </button>
+          <button
+            onClick={() => navigate('/learning')}
+            className="text-sm bg-gray-800  hover:bg-green-600 px-3 py-1.5 rounded-lg transition hidden sm:block"
+          >
+             Learn
           </button>
           <button
             onClick={() => navigate('/collab')}
-            className="text-sm bg-gray-800 hover:bg-cyan-600 px-3 py-1.5 rounded-lg transition hidden sm:block"
+            className="text-sm bg-gray-800  hover:bg-green-600 px-3 py-1.5 rounded-lg transition hidden sm:block"
           >
-            👥 Collab
+             Collab
           </button>
           <button
             onClick={handleLogout}
@@ -247,7 +272,7 @@ export default function Dashboard() {
           {history.length > 0 && (
             <div className="px-4 py-3 border-t border-gray-800 shrink-0">
               <button
-                onClick={() => { if (window.confirm('Delete all history?')) setHistory([]) }}
+                onClick={handleDeleteAll}
                 className="w-full text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 py-2 rounded-lg transition"
               >
                 🗑 Clear All History
