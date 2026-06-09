@@ -6,11 +6,13 @@ import Analytics from './pages/Analytics'
 import Landing from './pages/Landing'
 import GithubReview from './pages/GithubReview'
 import Collab from './pages/Collab'
+import EyeCare from './components/EyeCare'
 
 function App() {
   const token = localStorage.getItem('token')
   return (
     <BrowserRouter>
+      <EyeCare />
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
